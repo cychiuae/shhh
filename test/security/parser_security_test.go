@@ -292,23 +292,23 @@ func TestFileSizeLimits(t *testing.T) {
 func TestFileTypeDetection(t *testing.T) {
 	tests := []struct {
 		filename string
-		content  []byte
 		want     parser.FileFormat
 	}{
-		{"test.yaml", nil, parser.FormatYAML},
-		{"test.yml", nil, parser.FormatYAML},
-		{"test.json", nil, parser.FormatJSON},
-		{"test.ini", nil, parser.FormatINI},
-		{"test.env", nil, parser.FormatENV},
-		{"test.txt", []byte(`{"key": "value"}`), parser.FormatJSON},
-		{"test.txt", []byte(`key: value`), parser.FormatYAML},
-		{"test.txt", []byte("[section]\nkey=value"), parser.FormatINI},
-		{"test.txt", []byte("KEY=value\nKEY2=value2"), parser.FormatENV},
+		{"test.yaml", parser.FormatYAML},
+		{"test.yml", parser.FormatYAML},
+		{"test.json", parser.FormatJSON},
+		{"test.ini", parser.FormatINI},
+		{"test.cfg", parser.FormatINI},
+		{"test.conf", parser.FormatINI},
+		{"test.env", parser.FormatENV},
+		{"test.txt", parser.FormatUnknown},
+		{"test.md", parser.FormatUnknown},
+		{"test", parser.FormatUnknown},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
-			got := parser.DetectFormat(tt.filename, tt.content)
+			got := parser.DetectFormat(tt.filename)
 			if got != tt.want {
 				t.Errorf("DetectFormat(%q) = %v, want %v", tt.filename, got, tt.want)
 			}

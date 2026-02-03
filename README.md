@@ -5,11 +5,24 @@ A GitOps-friendly CLI tool for managing secrets in Git repositories.
 ## Features
 
 - **Value-level encryption**: Encrypts only values within YAML/JSON/INI/ENV files, preserving structure
-- **Full-file encryption**: Encrypts entire files when needed
+- **Full-file encryption**: Encrypts entire files when needed (or files with unsupported extensions)
 - **Multi-recipient**: Encrypt secrets for multiple GPG users
 - **Vault-based organization**: Group secrets and users into vaults
 - **Per-file access control**: Override vault-wide recipients for specific files
 - **GPG integration**: Uses GPG keys for encryption (go-crypto library with gpg CLI fallback)
+
+## Supported File Formats
+
+Format detection is based on file extension only:
+
+| Extension | Format |
+|-----------|--------|
+| `.yaml`, `.yml` | YAML |
+| `.json` | JSON |
+| `.ini`, `.cfg`, `.conf` | INI |
+| `.env` | ENV |
+
+Files with other extensions are encrypted using full-file mode.
 
 ## Installation
 

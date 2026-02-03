@@ -70,9 +70,10 @@ func EncryptFileContent(content []byte, filename string, opts EncryptOptions) ([
 }
 
 func encryptValuesFile(content []byte, filename string, opts EncryptOptions) ([]byte, error) {
-	p := parser.GetParserForFile(filename, content)
+	p := parser.GetParserForFile(filename)
 	if p == nil {
-		return nil, fmt.Errorf("unsupported file format: %s", filename)
+		// For unsupported file formats, encrypt the entire content
+		return encryptFullFile(content, opts)
 	}
 
 	encryptFunc := func(plaintext string) (string, error) {
@@ -92,7 +93,7 @@ func encryptValuesFile(content []byte, filename string, opts EncryptOptions) ([]
 		"recipients":   strings.Join(opts.Recipients, ", "),
 	}
 
-	format := parser.DetectFormat(filename, content)
+	format := parser.DetectFormat(filename)
 	switch format {
 	case parser.FormatYAML:
 		return parser.AddShhhMetadata(encrypted, metadata)
@@ -147,7 +148,7 @@ func DecryptFileContent(content []byte, filename string) ([]byte, error) {
 }
 
 func decryptValuesFile(content []byte, filename string) ([]byte, error) {
-	p := parser.GetParserForFile(filename, content)
+	p := parser.GetParserForFile(filename)
 	if p == nil {
 		return nil, fmt.Errorf("unsupported file format: %s", filename)
 	}
@@ -157,7 +158,7 @@ func decryptValuesFile(content []byte, filename string) ([]byte, error) {
 		return nil, err
 	}
 
-	format := parser.DetectFormat(filename, content)
+	format := parser.DetectFormat(filename)
 	switch format {
 	case parser.FormatYAML:
 		return parser.RemoveShhhMetadata(decrypted)
@@ -226,7 +227,7 @@ func GetFileMetadata(content []byte, filename string) (*FileMetadata, error) {
 		return parseFullFileMetadata(content)
 	}
 
-	format := parser.DetectFormat(filename, content)
+	format := parser.DetectFormat(filename)
 
 	var meta map[string]string
 	var err error

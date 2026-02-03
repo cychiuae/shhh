@@ -11,7 +11,7 @@
 - **Multi-recipient GPG encryption**: Encrypt secrets for multiple users
 - **Vault-based organization**: Group secrets and users into logical vaults
 - **Per-file recipient overrides**: Restrict files to specific users
-- **Multiple format support**: YAML, JSON, INI, ENV with auto-detection
+- **Multiple format support**: YAML, JSON, INI, ENV (detected by file extension)
 
 ## Directory Structure
 
@@ -48,7 +48,7 @@
 │   │   ├── json.go         # JSON parser
 │   │   ├── ini.go          # INI parser
 │   │   ├── env.go          # ENV parser
-│   │   └── detect.go       # Format auto-detection
+│   │   └── detect.go       # Format detection by extension
 │   ├── store/              # File system management
 │   │   └── store.go        # Store paths, initialization, file I/O
 │   └── gitignore/          # Git ignore management
@@ -118,6 +118,6 @@ _shhh:
 
 - **Store**: Manages `.shhh/` directory and file paths
 - **Crypto**: GPG encryption with native go-crypto or CLI fallback
-- **Parser**: Auto-detects and processes config file formats
+- **Parser**: Detects format by file extension (.yaml, .yml, .json, .ini, .cfg, .conf, .env) and processes config files; unsupported extensions fall back to full-file encryption
 - **Config**: Manages vaults, users, and file registrations
 - **Security**: Strict file permissions (0600), automatic .gitignore management
