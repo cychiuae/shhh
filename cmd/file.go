@@ -16,6 +16,8 @@ func init() {
 	rootCmd.AddCommand(fileCmd)
 	fileCmd.AddCommand(fileSetRecipientsCmd)
 	fileCmd.AddCommand(fileClearRecipientsCmd)
+	fileCmd.AddCommand(fileAddRecipientsCmd)
+	fileCmd.AddCommand(fileRemoveRecipientsCmd)
 	fileCmd.AddCommand(fileSetModeCmd)
 	fileCmd.AddCommand(fileSetGPGCopyCmd)
 	fileCmd.AddCommand(fileShowCmd)
@@ -43,6 +45,27 @@ var fileClearRecipientsCmd = &cobra.Command{
 	Long:  `Remove per-file recipient restrictions. The file will use all vault users.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runFileClearRecipients,
+}
+
+var fileAddRecipientsCmd = &cobra.Command{
+	Use:   "add-recipients <file> <email>...",
+	Short: "Add recipients to a file",
+	Long: `Add recipients to the file's recipient list.
+
+Recipients must be users in the file's vault.
+If the file has no per-file recipients, this enables per-file recipient restriction.`,
+	Args: cobra.MinimumNArgs(2),
+	RunE: runFileAddRecipients,
+}
+
+var fileRemoveRecipientsCmd = &cobra.Command{
+	Use:   "remove-recipients <file> <email>...",
+	Short: "Remove recipients from a file",
+	Long: `Remove recipients from the file's recipient list.
+
+If all recipients are removed, the file will use all vault users.`,
+	Args: cobra.MinimumNArgs(2),
+	RunE: runFileRemoveRecipients,
 }
 
 var fileSetModeCmd = &cobra.Command{
@@ -132,6 +155,72 @@ func runFileClearRecipients(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Cleared recipients for %s (will use all vault users)\n", relPath)
+	fmt.Println("Note: Run 'shhh reencrypt' to apply the change")
+	return nil
+}
+
+func runFileAddRecipients(cmd *cobra.Command, args []string) error {
+	s, err := store.GetStore()
+	if err != nil {
+		return err
+	}
+
+	filePath := args[0]
+	recipients := args[1:]
+
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve path: %w", err)
+	}
+
+	relPath, err := filepath.Rel(s.Root(), absPath)
+	if err != nil {
+		return fmt.Errorf("file must be within project directory: %w", err)
+	}
+
+	vault, _, err := config.FindFileVault(s, relPath)
+	if err != nil {
+		return err
+	}
+
+	if err := config.AddFileRecipients(s, vault, relPath, recipients); err != nil {
+		return err
+	}
+
+	fmt.Printf("Added recipients to %s: %v\n", relPath, recipients)
+	fmt.Println("Note: Run 'shhh reencrypt' to apply the new recipients")
+	return nil
+}
+
+func runFileRemoveRecipients(cmd *cobra.Command, args []string) error {
+	s, err := store.GetStore()
+	if err != nil {
+		return err
+	}
+
+	filePath := args[0]
+	recipients := args[1:]
+
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve path: %w", err)
+	}
+
+	relPath, err := filepath.Rel(s.Root(), absPath)
+	if err != nil {
+		return fmt.Errorf("file must be within project directory: %w", err)
+	}
+
+	vault, _, err := config.FindFileVault(s, relPath)
+	if err != nil {
+		return err
+	}
+
+	if err := config.RemoveFileRecipients(s, vault, relPath, recipients); err != nil {
+		return err
+	}
+
+	fmt.Printf("Removed recipients from %s: %v\n", relPath, recipients)
 	fmt.Println("Note: Run 'shhh reencrypt' to apply the change")
 	return nil
 }

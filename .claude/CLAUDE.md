@@ -98,6 +98,13 @@ shhh encrypt <file>     # Encrypt file
 shhh decrypt <file>     # Decrypt file
 shhh edit <file>        # Edit encrypted file
 shhh status             # Show encryption status
+
+# File recipient management
+shhh file set-recipients <file> <email>...     # Set specific recipients
+shhh file add-recipients <file> <email>...     # Add recipients
+shhh file remove-recipients <file> <email>...  # Remove recipients
+shhh file clear-recipients <file>              # Clear (use all vault users)
+shhh file show <file>                          # Show file settings
 ```
 
 ## Encryption Format

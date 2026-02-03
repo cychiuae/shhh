@@ -91,6 +91,8 @@ shhh edit secrets.yaml
 
 ### File Settings
 - `shhh file set-recipients <file> <email>...` - Set specific recipients
+- `shhh file add-recipients <file> <email>...` - Add recipients to a file
+- `shhh file remove-recipients <file> <email>...` - Remove recipients from a file
 - `shhh file clear-recipients <file>` - Clear per-file recipients
 - `shhh file set-mode <file> <values|full>` - Set encryption mode
 - `shhh file set-gpg-copy <file> <true|false>` - Enable/disable GPG backup
@@ -164,6 +166,12 @@ shhh encrypt --vault production
 ```bash
 # Restrict a file to specific users
 shhh file set-recipients secrets.yaml alice@example.com
+
+# Add additional recipients
+shhh file add-recipients secrets.yaml bob@example.com
+
+# Remove a recipient
+shhh file remove-recipients secrets.yaml bob@example.com
 
 # Re-encrypt with new recipients
 shhh reencrypt secrets.yaml

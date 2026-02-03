@@ -201,3 +201,68 @@ func SetFileGPGCopy(s *store.Store, vault, path string, gpgCopy bool) error {
 
 	return files.Save(s, vault)
 }
+
+func AddFileRecipients(s *store.Store, vault, path string, recipients []string) error {
+	users, err := LoadVaultUsers(s, vault)
+	if err != nil {
+		return fmt.Errorf("failed to load vault users: %w", err)
+	}
+
+	for _, r := range recipients {
+		if !users.HasUser(r) {
+			return fmt.Errorf("recipient %s is not a user in vault %s", r, vault)
+		}
+	}
+
+	files, err := LoadVaultFiles(s, vault)
+	if err != nil {
+		return fmt.Errorf("failed to load vault files: %w", err)
+	}
+
+	if !files.Update(path, func(f *RegisteredFile) {
+		for _, r := range recipients {
+			found := false
+			for _, existing := range f.Recipients {
+				if existing == r {
+					found = true
+					break
+				}
+			}
+			if !found {
+				f.Recipients = append(f.Recipients, r)
+			}
+		}
+	}) {
+		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+	}
+
+	return files.Save(s, vault)
+}
+
+func RemoveFileRecipients(s *store.Store, vault, path string, recipients []string) error {
+	files, err := LoadVaultFiles(s, vault)
+	if err != nil {
+		return fmt.Errorf("failed to load vault files: %w", err)
+	}
+
+	if !files.Update(path, func(f *RegisteredFile) {
+		newRecipients := make([]string, 0, len(f.Recipients))
+		for _, existing := range f.Recipients {
+			remove := false
+			for _, r := range recipients {
+				if existing == r {
+					remove = true
+					break
+				}
+			}
+			if !remove {
+				newRecipients = append(newRecipients, existing)
+			}
+		}
+		f.Recipients = newRecipients
+	}) {
+		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+	}
+
+	return files.Save(s, vault)
+}
