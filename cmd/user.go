@@ -104,6 +104,7 @@ func runUserAdd(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Println("  Expires: never")
 	}
+	fmt.Println("Note: Run 'shhh reencrypt' to grant access to existing secrets")
 
 	return nil
 }
