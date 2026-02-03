@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	Version   = "0.1.0"
+	Version   = "development"
 	BuildTime = "unknown"
 )
 
