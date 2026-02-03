@@ -170,5 +170,7 @@ func RemoveJSONMetadata(content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return buf.Bytes(), nil
+	// Trim trailing empty lines but keep one newline at the end
+	result := bytes.TrimRight(buf.Bytes(), "\n")
+	return append(result, '\n'), nil
 }

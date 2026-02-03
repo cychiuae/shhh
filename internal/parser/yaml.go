@@ -224,5 +224,7 @@ func RemoveShhhMetadata(content []byte) ([]byte, error) {
 	}
 	encoder.Close()
 
-	return buf.Bytes(), nil
+	// Trim trailing empty lines but keep one newline at the end
+	result := bytes.TrimRight(buf.Bytes(), "\n")
+	return append(result, '\n'), nil
 }

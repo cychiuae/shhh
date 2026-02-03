@@ -139,7 +139,9 @@ func RemoveINIMetadata(content []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return buf.Bytes(), nil
+	// Trim trailing empty lines but keep one newline at the end
+	result := bytes.TrimRight(buf.Bytes(), "\n")
+	return append(result, '\n'), nil
 }
 
 func ParseINISection(content []byte, sectionName string) (map[string]string, error) {

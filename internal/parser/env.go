@@ -149,7 +149,7 @@ func needsQuoting(value string) bool {
 func AddENVMetadata(content []byte, metadata map[string]interface{}) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.Write(content)
-	buf.WriteString("\n\n# shhh metadata\n")
+	buf.WriteString("\n# shhh metadata\n")
 
 	for k, v := range metadata {
 		buf.WriteString(fmt.Sprintf("_SHHH_%s=%v\n", strings.ToUpper(k), v))
@@ -182,7 +182,7 @@ func GetENVMetadata(content []byte) (map[string]string, error) {
 }
 
 func RemoveENVMetadata(content []byte) ([]byte, error) {
-	var buf bytes.Buffer
+	var lines []string
 	scanner := bufio.NewScanner(bytes.NewReader(content))
 	inMetadata := false
 
@@ -203,9 +203,23 @@ func RemoveENVMetadata(content []byte) ([]byte, error) {
 		}
 
 		inMetadata = false
+		lines = append(lines, line)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	// Trim trailing empty lines
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
+	}
+
+	var buf bytes.Buffer
+	for _, line := range lines {
 		buf.WriteString(line)
 		buf.WriteString("\n")
 	}
 
-	return buf.Bytes(), scanner.Err()
+	return buf.Bytes(), nil
 }
