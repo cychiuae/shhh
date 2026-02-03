@@ -1,3 +1,7 @@
+<p align="center">
+  <img alt="logo" src="assets/go.png" height="150" />
+</p>
+
 # shhh - Secret Management Tool
 
 A GitOps-friendly CLI tool for managing secrets in Git repositories.
