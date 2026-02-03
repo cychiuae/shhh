@@ -182,7 +182,7 @@ func encryptFile(s *store.Store, vault string, fileReg *config.RegisteredFile) e
 
 	fmt.Printf("Encrypted %s -> %s.enc\n", fileReg.Path, fileReg.Path)
 
-	if fileReg.GPGCopy || needsGPGCopy(s, vault) {
+	if config.GetEffectiveGPGCopy(s, fileReg) {
 		gpgPath := plainPath + ".gpg"
 		gpg := crypto.GetProvider()
 		gpgEncrypted, err := gpg.Encrypt(content, recipients)
@@ -194,12 +194,4 @@ func encryptFile(s *store.Store, vault string, fileReg *config.RegisteredFile) e
 	}
 
 	return nil
-}
-
-func needsGPGCopy(s *store.Store, vault string) bool {
-	cfg, err := config.Load(s)
-	if err != nil {
-		return false
-	}
-	return cfg.GPGCopy
 }

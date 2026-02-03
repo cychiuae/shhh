@@ -20,7 +20,7 @@ type User struct {
 type RegisteredFile struct {
 	Path         string    `yaml:"path"`
 	Mode         string    `yaml:"mode"`
-	GPGCopy      bool      `yaml:"gpg_copy"`
+	GPGCopy      *bool     `yaml:"gpg_copy,omitempty"`
 	Recipients   []string  `yaml:"recipients,omitempty"`
 	RegisteredAt time.Time `yaml:"registered_at"`
 }

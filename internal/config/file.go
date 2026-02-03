@@ -58,7 +58,7 @@ func RegisterFile(s *store.Store, vaultName, path string, mode string, recipient
 	file := RegisteredFile{
 		Path:         path,
 		Mode:         mode,
-		GPGCopy:      false,
+		GPGCopy:      nil, // nil means inherit from global config
 		Recipients:   recipients,
 		RegisteredAt: time.Now(),
 	}
@@ -184,12 +184,43 @@ func SetFileGPGCopy(s *store.Store, vaultName, path string, gpgCopy bool) error 
 	}
 
 	if !vault.UpdateFile(path, func(f *RegisteredFile) {
-		f.GPGCopy = gpgCopy
+		f.GPGCopy = &gpgCopy
 	}) {
 		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
 	return vault.Save(s, vaultName)
+}
+
+func ClearFileGPGCopy(s *store.Store, vaultName, path string) error {
+	vault, err := LoadVault(s, vaultName)
+	if err != nil {
+		return fmt.Errorf("failed to load vault: %w", err)
+	}
+
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
+		f.GPGCopy = nil
+	}) {
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
+	}
+
+	return vault.Save(s, vaultName)
+}
+
+// GetEffectiveGPGCopy returns whether GPG copy should be created for a file.
+// Per-file setting overrides global; if not set, uses global config.
+func GetEffectiveGPGCopy(s *store.Store, file *RegisteredFile) bool {
+	// Per-file setting takes precedence
+	if file.GPGCopy != nil {
+		return *file.GPGCopy
+	}
+
+	// Fall back to global config
+	cfg, err := Load(s)
+	if err != nil {
+		return false
+	}
+	return cfg.GPGCopy
 }
 
 func AddFileRecipients(s *store.Store, vaultName, path string, recipients []string) error {

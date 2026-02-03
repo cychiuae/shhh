@@ -110,6 +110,12 @@ shhh edit secrets.yaml
 - `shhh config set <key> <value>` - Set a config value
 - `shhh config list` - List all config values
 
+Available config keys:
+| Key | Description | Default |
+|-----|-------------|---------|
+| `default_vault` | Default vault for operations | `default` |
+| `gpg_copy` | Create native `.gpg` files alongside `.enc` files | `false` |
+
 ### Vault Management
 - `shhh vault create <name>` - Create a new vault
 - `shhh vault remove <name>` - Remove a vault
@@ -132,7 +138,8 @@ shhh edit secrets.yaml
 - `shhh file remove-recipients <file> <email>...` - Remove recipients from a file
 - `shhh file clear-recipients <file>` - Clear per-file recipients
 - `shhh file set-mode <file> <values|full>` - Set encryption mode
-- `shhh file set-gpg-copy <file> <true|false>` - Enable/disable GPG backup
+- `shhh file set-gpg-copy <file> <true|false>` - Override global GPG backup setting for this file
+- `shhh file clear-gpg-copy <file>` - Clear per-file GPG backup setting (use global config)
 - `shhh file show <file>` - Show file settings
 
 ### Encryption
@@ -216,6 +223,33 @@ shhh reencrypt secrets.yaml
 # Clear restrictions (use all vault users)
 shhh file clear-recipients secrets.yaml
 ```
+
+## GPG Backup
+
+shhh uses its own `.enc` format for encrypted files. If you need native GPG files for compatibility with standard GPG tools, enable the `gpg_copy` option to create `.gpg` files alongside `.enc` files during encryption.
+
+```bash
+# Enable globally for all files
+shhh config set gpg_copy true
+
+# Or enable for specific files only
+shhh file set-gpg-copy secrets.yaml true
+
+# Disable for a specific file (overrides global setting)
+shhh file set-gpg-copy secrets.yaml false
+
+# Reset to use global setting
+shhh file clear-gpg-copy secrets.yaml
+```
+
+Per-file settings override the global config:
+
+| Per-file | Global | Result |
+|----------|--------|--------|
+| not set  | false  | No .gpg file |
+| not set  | true   | Creates .gpg file |
+| true     | any    | Creates .gpg file |
+| false    | any    | No .gpg file |
 
 ## Directory Structure
 

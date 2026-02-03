@@ -20,6 +20,7 @@ func init() {
 	fileCmd.AddCommand(fileRemoveRecipientsCmd)
 	fileCmd.AddCommand(fileSetModeCmd)
 	fileCmd.AddCommand(fileSetGPGCopyCmd)
+	fileCmd.AddCommand(fileClearGPGCopyCmd)
 	fileCmd.AddCommand(fileShowCmd)
 }
 
@@ -82,9 +83,20 @@ var fileSetModeCmd = &cobra.Command{
 var fileSetGPGCopyCmd = &cobra.Command{
 	Use:   "set-gpg-copy <file> <true|false>",
 	Short: "Enable or disable GPG backup for a file",
-	Long:  `When enabled, a native .gpg file will be created alongside the .enc file.`,
-	Args:  cobra.ExactArgs(2),
-	RunE:  runFileSetGPGCopy,
+	Long: `Set per-file GPG backup setting, overriding the global config.
+
+When enabled, a native .gpg file will be created alongside the .enc file.
+Use 'clear-gpg-copy' to remove the per-file setting and use global config.`,
+	Args: cobra.ExactArgs(2),
+	RunE: runFileSetGPGCopy,
+}
+
+var fileClearGPGCopyCmd = &cobra.Command{
+	Use:   "clear-gpg-copy <file>",
+	Short: "Clear per-file GPG backup setting",
+	Long:  `Remove the per-file GPG backup setting. The file will use the global gpg_copy config.`,
+	Args:  cobra.ExactArgs(1),
+	RunE:  runFileClearGPGCopy,
 }
 
 var fileShowCmd = &cobra.Command{
@@ -293,11 +305,42 @@ func runFileSetGPGCopy(cmd *cobra.Command, args []string) error {
 	}
 
 	if gpgCopy {
-		fmt.Printf("Enabled GPG backup for %s\n", relPath)
+		fmt.Printf("Enabled GPG backup for %s (overrides global setting)\n", relPath)
 	} else {
-		fmt.Printf("Disabled GPG backup for %s\n", relPath)
+		fmt.Printf("Disabled GPG backup for %s (overrides global setting)\n", relPath)
 	}
 
+	return nil
+}
+
+func runFileClearGPGCopy(cmd *cobra.Command, args []string) error {
+	s, err := store.GetStore()
+	if err != nil {
+		return err
+	}
+
+	filePath := args[0]
+
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve path: %w", err)
+	}
+
+	relPath, err := filepath.Rel(s.Root(), absPath)
+	if err != nil {
+		return fmt.Errorf("file must be within project directory: %w", err)
+	}
+
+	vault, _, err := config.FindFileVault(s, relPath)
+	if err != nil {
+		return err
+	}
+
+	if err := config.ClearFileGPGCopy(s, vault, relPath); err != nil {
+		return err
+	}
+
+	fmt.Printf("Cleared GPG backup setting for %s (will use global config)\n", relPath)
 	return nil
 }
 
@@ -329,7 +372,15 @@ func runFileShow(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Registration:\n")
 	fmt.Printf("  Vault: %s\n", vault)
 	fmt.Printf("  Mode: %s\n", fileReg.Mode)
-	fmt.Printf("  GPG Copy: %v\n", fileReg.GPGCopy)
+
+	// Display GPG Copy with source indication
+	effectiveGPGCopy := config.GetEffectiveGPGCopy(s, fileReg)
+	if fileReg.GPGCopy != nil {
+		fmt.Printf("  GPG Copy: %v (per-file override)\n", effectiveGPGCopy)
+	} else {
+		fmt.Printf("  GPG Copy: %v (from global config)\n", effectiveGPGCopy)
+	}
+
 	fmt.Printf("  Registered: %s\n", fileReg.RegisteredAt.Format("2006-01-02 15:04:05"))
 	fmt.Println()
 

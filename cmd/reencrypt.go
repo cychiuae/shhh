@@ -202,7 +202,7 @@ func reencryptFile(s *store.Store, vault string, fileReg *config.RegisteredFile)
 
 	fmt.Printf("Re-encrypted %s.enc\n", fileReg.Path)
 
-	if fileReg.GPGCopy || needsGPGCopy(s, vault) {
+	if config.GetEffectiveGPGCopy(s, fileReg) {
 		gpgPath := filepath.Join(s.Root(), fileReg.Path) + ".gpg"
 		gpg := crypto.GetProvider()
 		gpgEncrypted, err := gpg.Encrypt(decrypted, recipients)
