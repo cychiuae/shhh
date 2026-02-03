@@ -15,6 +15,7 @@ var (
 	registerVault      string
 	registerMode       string
 	registerRecipients []string
+	registerNoEncrypt  bool
 )
 
 func init() {
@@ -24,6 +25,7 @@ func init() {
 	registerCmd.Flags().StringVarP(&registerVault, "vault", "v", "", "Vault to register file in")
 	registerCmd.Flags().StringVarP(&registerMode, "mode", "m", "values", "Encryption mode: values or full")
 	registerCmd.Flags().StringSliceVarP(&registerRecipients, "recipients", "r", nil, "Specific recipients (default: all vault users)")
+	registerCmd.Flags().BoolVar(&registerNoEncrypt, "no-encrypt", false, "Skip automatic encryption after registration")
 
 	unregisterCmd.Flags().StringVarP(&registerVault, "vault", "v", "", "Vault to unregister file from")
 }
@@ -33,6 +35,8 @@ var registerCmd = &cobra.Command{
 	Short: "Register a file for encryption",
 	Long: `Register a file to be managed by shhh.
 
+The file will be encrypted automatically after registration.
+Use --no-encrypt to skip automatic encryption.
 The file will be added to .gitignore automatically.
 By default, all vault users can decrypt the file.
 Use --recipients to restrict access to specific users.`,
@@ -96,6 +100,19 @@ func runRegister(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  Recipients: %v\n", registerRecipients)
 	} else {
 		fmt.Println("  Recipients: all vault users")
+	}
+
+	// Auto-encrypt unless --no-encrypt is specified
+	if !registerNoEncrypt {
+		files, err := config.LoadVaultFiles(s, vault)
+		if err == nil {
+			if fileReg := files.Get(relPath); fileReg != nil {
+				if err := encryptFile(s, vault, fileReg); err != nil {
+					fmt.Printf("Warning: encryption failed: %v\n", err)
+					fmt.Println("Run 'shhh encrypt' manually after resolving the issue")
+				}
+			}
+		}
 	}
 
 	return nil
