@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ var decryptCmd = &cobra.Command{
 
 Use --vault to decrypt all files in a specific vault.
 Use --all to decrypt all registered files across all vaults.
-Use --force to overwrite existing plaintext files.`,
+Use --force to overwrite existing plaintext files without prompting.`,
 	RunE: runDecrypt,
 }
 
@@ -94,10 +95,43 @@ func decryptVaultFiles(s *store.Store, vault string) error {
 		return nil
 	}
 
+	// Collect files to decrypt and check for existing plaintext files
+	type fileEntry struct {
+		vault   string
+		fileReg *config.RegisteredFile
+	}
+	var toDecrypt []fileEntry
+	var existingFiles []string
+
+	for i := range files.Files {
+		f := &files.Files[i]
+		toDecrypt = append(toDecrypt, fileEntry{vault: vault, fileReg: f})
+		plainPath := filepath.Join(s.Root(), f.Path)
+		if _, err := os.Stat(plainPath); err == nil {
+			existingFiles = append(existingFiles, f.Path)
+		}
+	}
+
+	// Prompt once for all existing files
+	if !decryptForce && len(existingFiles) > 0 {
+		fmt.Println("The following files already exist:")
+		for _, f := range existingFiles {
+			fmt.Printf("  - %s\n", f)
+		}
+		fmt.Print("Overwrite all? [y/N] ")
+		reader := bufio.NewReader(os.Stdin)
+		answer, _ := reader.ReadString('\n')
+		answer = strings.TrimSpace(strings.ToLower(answer))
+		if answer != "y" && answer != "yes" {
+			fmt.Println("Aborted")
+			return nil
+		}
+	}
+
 	var errs []error
-	for _, f := range files.Files {
-		if err := decryptFile(s, vault, &f); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", f.Path, err))
+	for _, entry := range toDecrypt {
+		if err := decryptFileNoPrompt(s, entry.vault, entry.fileReg); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", entry.fileReg.Path, err))
 		}
 	}
 
@@ -117,8 +151,13 @@ func decryptAllFiles(s *store.Store) error {
 		return err
 	}
 
-	totalFiles := 0
-	var errs []error
+	// Collect files to decrypt and check for existing plaintext files
+	type fileEntry struct {
+		vault   string
+		fileReg *config.RegisteredFile
+	}
+	var toDecrypt []fileEntry
+	var existingFiles []string
 
 	for _, vault := range vaults {
 		files, err := config.LoadVaultFiles(s, vault)
@@ -126,17 +165,42 @@ func decryptAllFiles(s *store.Store) error {
 			continue
 		}
 
-		for _, f := range files.Files {
-			totalFiles++
-			if err := decryptFile(s, vault, &f); err != nil {
-				errs = append(errs, fmt.Errorf("%s (%s): %w", f.Path, vault, err))
+		for i := range files.Files {
+			f := &files.Files[i]
+			toDecrypt = append(toDecrypt, fileEntry{vault: vault, fileReg: f})
+			plainPath := filepath.Join(s.Root(), f.Path)
+			if _, err := os.Stat(plainPath); err == nil {
+				existingFiles = append(existingFiles, f.Path)
 			}
 		}
 	}
 
-	if totalFiles == 0 {
+	if len(toDecrypt) == 0 {
 		fmt.Println("No files registered")
 		return nil
+	}
+
+	// Prompt once for all existing files
+	if !decryptForce && len(existingFiles) > 0 {
+		fmt.Println("The following files already exist:")
+		for _, f := range existingFiles {
+			fmt.Printf("  - %s\n", f)
+		}
+		fmt.Print("Overwrite all? [y/N] ")
+		reader := bufio.NewReader(os.Stdin)
+		answer, _ := reader.ReadString('\n')
+		answer = strings.TrimSpace(strings.ToLower(answer))
+		if answer != "y" && answer != "yes" {
+			fmt.Println("Aborted")
+			return nil
+		}
+	}
+
+	var errs []error
+	for _, entry := range toDecrypt {
+		if err := decryptFileNoPrompt(s, entry.vault, entry.fileReg); err != nil {
+			errs = append(errs, fmt.Errorf("%s (%s): %w", entry.fileReg.Path, entry.vault, err))
+		}
 	}
 
 	if len(errs) > 0 {
@@ -159,8 +223,41 @@ func decryptFile(s *store.Store, vault string, fileReg *config.RegisteredFile) e
 
 	if !decryptForce {
 		if _, err := os.Stat(plainPath); err == nil {
-			return fmt.Errorf("plaintext file already exists (use --force to overwrite)")
+			fmt.Printf("File %s already exists. Overwrite? [y/N] ", fileReg.Path)
+			reader := bufio.NewReader(os.Stdin)
+			answer, _ := reader.ReadString('\n')
+			answer = strings.TrimSpace(strings.ToLower(answer))
+			if answer != "y" && answer != "yes" {
+				fmt.Printf("Skipped %s\n", fileReg.Path)
+				return nil
+			}
 		}
+	}
+
+	content, err := os.ReadFile(encPath)
+	if err != nil {
+		return fmt.Errorf("failed to read encrypted file: %w", err)
+	}
+
+	decrypted, err := crypto.DecryptFileContent(content, fileReg.Path)
+	if err != nil {
+		return fmt.Errorf("decryption failed: %w", err)
+	}
+
+	if err := os.WriteFile(plainPath, decrypted, 0600); err != nil {
+		return fmt.Errorf("failed to write plaintext file: %w", err)
+	}
+
+	fmt.Printf("Decrypted %s.enc -> %s\n", fileReg.Path, fileReg.Path)
+	return nil
+}
+
+func decryptFileNoPrompt(s *store.Store, vault string, fileReg *config.RegisteredFile) error {
+	plainPath := filepath.Join(s.Root(), fileReg.Path)
+	encPath := plainPath + ".enc"
+
+	if _, err := os.Stat(encPath); os.IsNotExist(err) {
+		return fmt.Errorf("encrypted file does not exist: %s.enc", fileReg.Path)
 	}
 
 	content, err := os.ReadFile(encPath)
