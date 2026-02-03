@@ -49,6 +49,7 @@ func (v *VaultUsers) Save(s *store.Store, vault string) error {
 	if err != nil {
 		return err
 	}
+	data = append(data, '\n')
 	return store.WriteFile(s.VaultUsersPath(vault), data)
 }
 
@@ -134,6 +135,7 @@ func (v *VaultFiles) Save(s *store.Store, vault string) error {
 	if err != nil {
 		return err
 	}
+	data = append(data, '\n')
 	return store.WriteFile(s.VaultFilesPath(vault), data)
 }
 

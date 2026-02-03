@@ -45,6 +45,7 @@ func (c *Config) Save(s *store.Store) error {
 	if err != nil {
 		return err
 	}
+	data = append(data, '\n')
 	return store.WriteFile(s.ConfigPath(), data)
 }
 

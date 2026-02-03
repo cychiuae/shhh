@@ -35,7 +35,7 @@ func (p *ENVParser) EncryptValues(content []byte, encrypt EncryptFunc) ([]byte, 
 		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 
-	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+	return buf.Bytes(), nil
 }
 
 func (p *ENVParser) DecryptValues(content []byte, decrypt DecryptFunc) ([]byte, error) {
@@ -60,7 +60,7 @@ func (p *ENVParser) DecryptValues(content []byte, decrypt DecryptFunc) ([]byte, 
 		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 
-	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+	return buf.Bytes(), nil
 }
 
 func (p *ENVParser) processLine(line string, transform func(string) (string, error), encrypting bool) (string, error) {
@@ -207,5 +207,5 @@ func RemoveENVMetadata(content []byte) ([]byte, error) {
 		buf.WriteString("\n")
 	}
 
-	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), scanner.Err()
+	return buf.Bytes(), scanner.Err()
 }
