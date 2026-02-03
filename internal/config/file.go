@@ -35,7 +35,7 @@ func ValidateFilePath(path string) error {
 	return nil
 }
 
-func RegisterFile(s *store.Store, vault, path string, mode string, recipients []string) error {
+func RegisterFile(s *store.Store, vaultName, path string, mode string, recipients []string) error {
 	if err := ValidateFilePath(path); err != nil {
 		return err
 	}
@@ -44,20 +44,15 @@ func RegisterFile(s *store.Store, vault, path string, mode string, recipients []
 		return fmt.Errorf("invalid mode: %s (must be 'values' or 'full')", mode)
 	}
 
-	users, err := LoadVaultUsers(s, vault)
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault users: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
 	for _, r := range recipients {
-		if !users.HasUser(r) {
-			return fmt.Errorf("recipient %s is not a user in vault %s", r, vault)
+		if !vault.HasUser(r) {
+			return fmt.Errorf("recipient %s is not a user in vault %s", r, vaultName)
 		}
-	}
-
-	files, err := LoadVaultFiles(s, vault)
-	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
 	}
 
 	file := RegisteredFile{
@@ -68,27 +63,27 @@ func RegisterFile(s *store.Store, vault, path string, mode string, recipients []
 		RegisteredAt: time.Now(),
 	}
 
-	files.Register(file)
+	vault.RegisterFile(file)
 
-	if err := files.Save(s, vault); err != nil {
-		return fmt.Errorf("failed to save files: %w", err)
+	if err := vault.Save(s, vaultName); err != nil {
+		return fmt.Errorf("failed to save vault: %w", err)
 	}
 
 	return nil
 }
 
-func UnregisterFile(s *store.Store, vault, path string) error {
-	files, err := LoadVaultFiles(s, vault)
+func UnregisterFile(s *store.Store, vaultName, path string) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if !files.Unregister(path) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+	if !vault.UnregisterFile(path) {
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	if err := files.Save(s, vault); err != nil {
-		return fmt.Errorf("failed to save files: %w", err)
+	if err := vault.Save(s, vaultName); err != nil {
+		return fmt.Errorf("failed to save vault: %w", err)
 	}
 
 	return nil
@@ -100,126 +95,116 @@ func FindFileVault(s *store.Store, path string) (string, *RegisteredFile, error)
 		return "", nil, err
 	}
 
-	for _, vault := range vaults {
-		files, err := LoadVaultFiles(s, vault)
+	for _, vaultName := range vaults {
+		vault, err := LoadVault(s, vaultName)
 		if err != nil {
 			continue
 		}
 
-		if f := files.Get(path); f != nil {
-			return vault, f, nil
+		if f := vault.GetFile(path); f != nil {
+			return vaultName, f, nil
 		}
 	}
 
 	return "", nil, fmt.Errorf("file %s not registered in any vault", path)
 }
 
-func GetEffectiveRecipients(s *store.Store, vault string, file *RegisteredFile) ([]string, error) {
+func GetEffectiveRecipients(s *store.Store, vaultName string, file *RegisteredFile) ([]string, error) {
 	if len(file.Recipients) > 0 {
 		return file.Recipients, nil
 	}
 
-	users, err := LoadVaultUsers(s, vault)
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
 		return nil, err
 	}
 
-	return users.Emails(), nil
+	return vault.Emails(), nil
 }
 
-func SetFileRecipients(s *store.Store, vault, path string, recipients []string) error {
-	users, err := LoadVaultUsers(s, vault)
+func SetFileRecipients(s *store.Store, vaultName, path string, recipients []string) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault users: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
 	for _, r := range recipients {
-		if !users.HasUser(r) {
-			return fmt.Errorf("recipient %s is not a user in vault %s", r, vault)
+		if !vault.HasUser(r) {
+			return fmt.Errorf("recipient %s is not a user in vault %s", r, vaultName)
 		}
 	}
 
-	files, err := LoadVaultFiles(s, vault)
-	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
-	}
-
-	if !files.Update(path, func(f *RegisteredFile) {
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
 		f.Recipients = recipients
 	}) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	return files.Save(s, vault)
+	return vault.Save(s, vaultName)
 }
 
-func ClearFileRecipients(s *store.Store, vault, path string) error {
-	files, err := LoadVaultFiles(s, vault)
+func ClearFileRecipients(s *store.Store, vaultName, path string) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if !files.Update(path, func(f *RegisteredFile) {
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
 		f.Recipients = nil
 	}) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	return files.Save(s, vault)
+	return vault.Save(s, vaultName)
 }
 
-func SetFileMode(s *store.Store, vault, path, mode string) error {
+func SetFileMode(s *store.Store, vaultName, path, mode string) error {
 	if mode != ModeValues && mode != ModeFull {
 		return fmt.Errorf("invalid mode: %s (must be 'values' or 'full')", mode)
 	}
 
-	files, err := LoadVaultFiles(s, vault)
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if !files.Update(path, func(f *RegisteredFile) {
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
 		f.Mode = mode
 	}) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	return files.Save(s, vault)
+	return vault.Save(s, vaultName)
 }
 
-func SetFileGPGCopy(s *store.Store, vault, path string, gpgCopy bool) error {
-	files, err := LoadVaultFiles(s, vault)
+func SetFileGPGCopy(s *store.Store, vaultName, path string, gpgCopy bool) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if !files.Update(path, func(f *RegisteredFile) {
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
 		f.GPGCopy = gpgCopy
 	}) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	return files.Save(s, vault)
+	return vault.Save(s, vaultName)
 }
 
-func AddFileRecipients(s *store.Store, vault, path string, recipients []string) error {
-	users, err := LoadVaultUsers(s, vault)
+func AddFileRecipients(s *store.Store, vaultName, path string, recipients []string) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault users: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
 	for _, r := range recipients {
-		if !users.HasUser(r) {
-			return fmt.Errorf("recipient %s is not a user in vault %s", r, vault)
+		if !vault.HasUser(r) {
+			return fmt.Errorf("recipient %s is not a user in vault %s", r, vaultName)
 		}
 	}
 
-	files, err := LoadVaultFiles(s, vault)
-	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
-	}
-
-	if !files.Update(path, func(f *RegisteredFile) {
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
 		for _, r := range recipients {
 			found := false
 			for _, existing := range f.Recipients {
@@ -233,19 +218,19 @@ func AddFileRecipients(s *store.Store, vault, path string, recipients []string) 
 			}
 		}
 	}) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	return files.Save(s, vault)
+	return vault.Save(s, vaultName)
 }
 
-func RemoveFileRecipients(s *store.Store, vault, path string, recipients []string) error {
-	files, err := LoadVaultFiles(s, vault)
+func RemoveFileRecipients(s *store.Store, vaultName, path string, recipients []string) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if !files.Update(path, func(f *RegisteredFile) {
+	if !vault.UpdateFile(path, func(f *RegisteredFile) {
 		newRecipients := make([]string, 0, len(f.Recipients))
 		for _, existing := range f.Recipients {
 			remove := false
@@ -261,8 +246,8 @@ func RemoveFileRecipients(s *store.Store, vault, path string, recipients []strin
 		}
 		f.Recipients = newRecipients
 	}) {
-		return fmt.Errorf("file %s not registered in vault %s", path, vault)
+		return fmt.Errorf("file %s not registered in vault %s", path, vaultName)
 	}
 
-	return files.Save(s, vault)
+	return vault.Save(s, vaultName)
 }

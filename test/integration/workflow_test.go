@@ -38,23 +38,18 @@ func TestFullWorkflow(t *testing.T) {
 		t.Fatalf("failed to save config: %v", err)
 	}
 
-	usersData := config.NewVaultUsers()
-	if err := usersData.Save(s, store.DefaultVault); err != nil {
-		t.Fatalf("failed to initialize users: %v", err)
+	vault := config.NewVault()
+	if err := vault.Save(s, store.DefaultVault); err != nil {
+		t.Fatalf("failed to initialize vault: %v", err)
 	}
 
-	filesData := config.NewVaultFiles()
-	if err := filesData.Save(s, store.DefaultVault); err != nil {
-		t.Fatalf("failed to initialize files: %v", err)
-	}
-
-	usersData.Add(config.User{
+	vault.AddUser(config.User{
 		Email:       "alice@test.com",
 		KeyID:       "TESTKEY",
 		Fingerprint: "TESTFINGERPRINT",
 	})
-	if err := usersData.Save(s, store.DefaultVault); err != nil {
-		t.Fatalf("failed to save users: %v", err)
+	if err := vault.Save(s, store.DefaultVault); err != nil {
+		t.Fatalf("failed to save vault: %v", err)
 	}
 
 	secretContent := []byte(`database:
@@ -70,8 +65,8 @@ func TestFullWorkflow(t *testing.T) {
 		t.Fatalf("failed to register file: %v", err)
 	}
 
-	files, _ := config.LoadVaultFiles(s, store.DefaultVault)
-	fileReg := files.Get("secrets.yaml")
+	vault, _ = config.LoadVault(s, store.DefaultVault)
+	fileReg := vault.GetFile("secrets.yaml")
 	if fileReg == nil {
 		t.Fatal("file not registered")
 	}
@@ -130,21 +125,19 @@ func TestMultiVaultWorkflow(t *testing.T) {
 
 	config.NewConfig().Save(s)
 
-	config.NewVaultUsers().Save(s, store.DefaultVault)
-	config.NewVaultFiles().Save(s, store.DefaultVault)
+	defaultVault := config.NewVault()
+	defaultVault.Save(s, store.DefaultVault)
 
 	s.CreateVault("production")
-	config.NewVaultUsers().Save(s, "production")
-	config.NewVaultFiles().Save(s, "production")
+	prodVault := config.NewVault()
+	prodVault.Save(s, "production")
 
-	devUsers, _ := config.LoadVaultUsers(s, store.DefaultVault)
-	devUsers.Add(config.User{Email: "alice@test.com", KeyID: "ALICE"})
-	devUsers.Add(config.User{Email: "bob@test.com", KeyID: "BOB"})
-	devUsers.Save(s, store.DefaultVault)
+	defaultVault.AddUser(config.User{Email: "alice@test.com", KeyID: "ALICE"})
+	defaultVault.AddUser(config.User{Email: "bob@test.com", KeyID: "BOB"})
+	defaultVault.Save(s, store.DefaultVault)
 
-	prodUsers, _ := config.LoadVaultUsers(s, "production")
-	prodUsers.Add(config.User{Email: "alice@test.com", KeyID: "ALICE"})
-	prodUsers.Save(s, "production")
+	prodVault.AddUser(config.User{Email: "alice@test.com", KeyID: "ALICE"})
+	prodVault.Save(s, "production")
 
 	devSecret := filepath.Join(tmpDir, "dev-secrets.yaml")
 	os.WriteFile(devSecret, []byte("password: dev123"), 0600)
@@ -154,22 +147,22 @@ func TestMultiVaultWorkflow(t *testing.T) {
 	os.WriteFile(prodSecret, []byte("password: prod123"), 0600)
 	config.RegisterFile(s, "production", "prod-secrets.yaml", "values", nil)
 
-	devFiles, _ := config.LoadVaultFiles(s, store.DefaultVault)
-	if len(devFiles.Files) != 1 {
-		t.Errorf("expected 1 file in default vault, got %d", len(devFiles.Files))
+	devVault, _ := config.LoadVault(s, store.DefaultVault)
+	if len(devVault.Files) != 1 {
+		t.Errorf("expected 1 file in default vault, got %d", len(devVault.Files))
 	}
 
-	prodFiles, _ := config.LoadVaultFiles(s, "production")
-	if len(prodFiles.Files) != 1 {
-		t.Errorf("expected 1 file in production vault, got %d", len(prodFiles.Files))
+	prodVault, _ = config.LoadVault(s, "production")
+	if len(prodVault.Files) != 1 {
+		t.Errorf("expected 1 file in production vault, got %d", len(prodVault.Files))
 	}
 
-	devRecipients, _ := config.GetEffectiveRecipients(s, store.DefaultVault, devFiles.Get("dev-secrets.yaml"))
+	devRecipients, _ := config.GetEffectiveRecipients(s, store.DefaultVault, devVault.GetFile("dev-secrets.yaml"))
 	if len(devRecipients) != 2 {
 		t.Errorf("expected 2 recipients for dev, got %d", len(devRecipients))
 	}
 
-	prodRecipients, _ := config.GetEffectiveRecipients(s, "production", prodFiles.Get("prod-secrets.yaml"))
+	prodRecipients, _ := config.GetEffectiveRecipients(s, "production", prodVault.GetFile("prod-secrets.yaml"))
 	if len(prodRecipients) != 1 {
 		t.Errorf("expected 1 recipient for prod, got %d", len(prodRecipients))
 	}
@@ -195,12 +188,10 @@ func TestPerFileRecipients(t *testing.T) {
 	s.Initialize()
 	config.NewConfig().Save(s)
 
-	users := config.NewVaultUsers()
-	users.Add(config.User{Email: "alice@test.com", KeyID: "ALICE"})
-	users.Add(config.User{Email: "bob@test.com", KeyID: "BOB"})
-	users.Save(s, store.DefaultVault)
-
-	config.NewVaultFiles().Save(s, store.DefaultVault)
+	vault := config.NewVault()
+	vault.AddUser(config.User{Email: "alice@test.com", KeyID: "ALICE"})
+	vault.AddUser(config.User{Email: "bob@test.com", KeyID: "BOB"})
+	vault.Save(s, store.DefaultVault)
 
 	secretPath := filepath.Join(tmpDir, "secrets.yaml")
 	os.WriteFile(secretPath, []byte("password: secret"), 0600)
@@ -208,8 +199,8 @@ func TestPerFileRecipients(t *testing.T) {
 
 	config.SetFileRecipients(s, store.DefaultVault, "secrets.yaml", []string{"alice@test.com"})
 
-	files, _ := config.LoadVaultFiles(s, store.DefaultVault)
-	fileReg := files.Get("secrets.yaml")
+	vault, _ = config.LoadVault(s, store.DefaultVault)
+	fileReg := vault.GetFile("secrets.yaml")
 
 	recipients, _ := config.GetEffectiveRecipients(s, store.DefaultVault, fileReg)
 
@@ -219,8 +210,8 @@ func TestPerFileRecipients(t *testing.T) {
 
 	config.ClearFileRecipients(s, store.DefaultVault, "secrets.yaml")
 
-	files, _ = config.LoadVaultFiles(s, store.DefaultVault)
-	fileReg = files.Get("secrets.yaml")
+	vault, _ = config.LoadVault(s, store.DefaultVault)
+	fileReg = vault.GetFile("secrets.yaml")
 	recipients, _ = config.GetEffectiveRecipients(s, store.DefaultVault, fileReg)
 
 	if len(recipients) != 2 {

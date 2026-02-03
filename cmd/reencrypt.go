@@ -78,33 +78,33 @@ func reencryptSingleFile(s *store.Store, filePath string) error {
 	return reencryptFile(s, vault, fileReg)
 }
 
-func reencryptVaultFiles(s *store.Store, vault string) error {
-	if !s.VaultExists(vault) {
-		return fmt.Errorf("vault %q does not exist", vault)
+func reencryptVaultFiles(s *store.Store, vaultName string) error {
+	if !s.VaultExists(vaultName) {
+		return fmt.Errorf("vault %q does not exist", vaultName)
 	}
 
-	files, err := config.LoadVaultFiles(s, vault)
+	vault, err := config.LoadVault(s, vaultName)
 	if err != nil {
 		return err
 	}
 
-	if len(files.Files) == 0 {
-		fmt.Printf("No files registered in vault %s\n", vault)
+	if len(vault.Files) == 0 {
+		fmt.Printf("No files registered in vault %s\n", vaultName)
 		return nil
 	}
 
 	var errs []error
 	successCount := 0
 
-	for _, f := range files.Files {
-		if err := reencryptFile(s, vault, &f); err != nil {
+	for _, f := range vault.Files {
+		if err := reencryptFile(s, vaultName, &f); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", f.Path, err))
 		} else {
 			successCount++
 		}
 	}
 
-	fmt.Printf("\nRe-encrypted %d file(s) in vault %s\n", successCount, vault)
+	fmt.Printf("\nRe-encrypted %d file(s) in vault %s\n", successCount, vaultName)
 
 	if len(errs) > 0 {
 		for _, e := range errs {
@@ -126,16 +126,16 @@ func reencryptAllFiles(s *store.Store) error {
 	successCount := 0
 	var errs []error
 
-	for _, vault := range vaults {
-		files, err := config.LoadVaultFiles(s, vault)
+	for _, vaultName := range vaults {
+		vault, err := config.LoadVault(s, vaultName)
 		if err != nil {
 			continue
 		}
 
-		for _, f := range files.Files {
+		for _, f := range vault.Files {
 			totalFiles++
-			if err := reencryptFile(s, vault, &f); err != nil {
-				errs = append(errs, fmt.Errorf("%s (%s): %w", f.Path, vault, err))
+			if err := reencryptFile(s, vaultName, &f); err != nil {
+				errs = append(errs, fmt.Errorf("%s (%s): %w", f.Path, vaultName, err))
 			} else {
 				successCount++
 			}

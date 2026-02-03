@@ -73,24 +73,24 @@ func encryptSingleFile(s *store.Store, filePath string) error {
 	return encryptFile(s, vault, fileReg)
 }
 
-func encryptVaultFiles(s *store.Store, vault string) error {
-	if !s.VaultExists(vault) {
-		return fmt.Errorf("vault %q does not exist", vault)
+func encryptVaultFiles(s *store.Store, vaultName string) error {
+	if !s.VaultExists(vaultName) {
+		return fmt.Errorf("vault %q does not exist", vaultName)
 	}
 
-	files, err := config.LoadVaultFiles(s, vault)
+	vault, err := config.LoadVault(s, vaultName)
 	if err != nil {
 		return err
 	}
 
-	if len(files.Files) == 0 {
-		fmt.Printf("No files registered in vault %s\n", vault)
+	if len(vault.Files) == 0 {
+		fmt.Printf("No files registered in vault %s\n", vaultName)
 		return nil
 	}
 
 	var errs []error
-	for _, f := range files.Files {
-		if err := encryptFile(s, vault, &f); err != nil {
+	for _, f := range vault.Files {
+		if err := encryptFile(s, vaultName, &f); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", f.Path, err))
 		}
 	}
@@ -114,16 +114,16 @@ func encryptAllFiles(s *store.Store) error {
 	totalFiles := 0
 	var errs []error
 
-	for _, vault := range vaults {
-		files, err := config.LoadVaultFiles(s, vault)
+	for _, vaultName := range vaults {
+		vault, err := config.LoadVault(s, vaultName)
 		if err != nil {
 			continue
 		}
 
-		for _, f := range files.Files {
+		for _, f := range vault.Files {
 			totalFiles++
-			if err := encryptFile(s, vault, &f); err != nil {
-				errs = append(errs, fmt.Errorf("%s (%s): %w", f.Path, vault, err))
+			if err := encryptFile(s, vaultName, &f); err != nil {
+				errs = append(errs, fmt.Errorf("%s (%s): %w", f.Path, vaultName, err))
 			}
 		}
 	}

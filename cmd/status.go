@@ -53,32 +53,29 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	hasWarnings := false
 	totalFiles := 0
 
-	for _, vault := range vaults {
-		users, _ := config.LoadVaultUsers(s, vault)
-		files, err := config.LoadVaultFiles(s, vault)
+	for _, vaultName := range vaults {
+		vault, err := config.LoadVault(s, vaultName)
 		if err != nil {
 			continue
 		}
 
-		if len(files.Files) == 0 && (statusVault == "" || len(vaults) > 1) {
+		if len(vault.Files) == 0 && (statusVault == "" || len(vaults) > 1) {
 			continue
 		}
 
-		fmt.Printf("Vault: %s\n", vault)
+		fmt.Printf("Vault: %s\n", vaultName)
 
-		if users != nil {
-			for _, u := range users.Users {
-				if crypto.IsExpired(u.ExpiresAt) {
-					fmt.Printf("  ⚠ User %s: key has EXPIRED\n", u.Email)
-					hasWarnings = true
-				} else if crypto.IsExpiringSoon(u.ExpiresAt, 30) {
-					fmt.Printf("  ⚠ User %s: key expires %s\n", u.Email, u.ExpiresAt.Format("2006-01-02"))
-					hasWarnings = true
-				}
+		for _, u := range vault.Users {
+			if crypto.IsExpired(u.ExpiresAt) {
+				fmt.Printf("  ⚠ User %s: key has EXPIRED\n", u.Email)
+				hasWarnings = true
+			} else if crypto.IsExpiringSoon(u.ExpiresAt, 30) {
+				fmt.Printf("  ⚠ User %s: key expires %s\n", u.Email, u.ExpiresAt.Format("2006-01-02"))
+				hasWarnings = true
 			}
 		}
 
-		if len(files.Files) == 0 {
+		if len(vault.Files) == 0 {
 			fmt.Println("  No files registered")
 			fmt.Println()
 			continue
@@ -86,7 +83,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 		fmt.Println()
 
-		for _, f := range files.Files {
+		for _, f := range vault.Files {
 			totalFiles++
 			status := getFileStatusDetailed(s.Root(), f.Path)
 

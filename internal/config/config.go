@@ -1,18 +1,19 @@
 package config
 
 import (
-	"encoding/json"
+	"bytes"
 	"os"
 
 	"github.com/cychiuae/shhh/internal/store"
+	"gopkg.in/yaml.v3"
 )
 
 const CurrentVersion = "1"
 
 type Config struct {
-	Version      string `json:"version"`
-	GPGCopy      bool   `json:"gpg_copy"`
-	DefaultVault string `json:"default_vault"`
+	Version      string `yaml:"version"`
+	GPGCopy      bool   `yaml:"gpg_copy"`
+	DefaultVault string `yaml:"default_vault"`
 }
 
 func NewConfig() *Config {
@@ -33,7 +34,7 @@ func Load(s *store.Store) (*Config, error) {
 	}
 
 	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -41,12 +42,14 @@ func Load(s *store.Store) (*Config, error) {
 }
 
 func (c *Config) Save(s *store.Store) error {
-	data, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
+	var buf bytes.Buffer
+	encoder := yaml.NewEncoder(&buf)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(c); err != nil {
 		return err
 	}
-	data = append(data, '\n')
-	return store.WriteFile(s.ConfigPath(), data)
+	encoder.Close()
+	return store.WriteFile(s.ConfigPath(), buf.Bytes())
 }
 
 func (c *Config) Get(key string) (string, bool) {

@@ -104,9 +104,9 @@ func runRegister(cmd *cobra.Command, args []string) error {
 
 	// Auto-encrypt unless --no-encrypt is specified
 	if !registerNoEncrypt {
-		files, err := config.LoadVaultFiles(s, vault)
+		v, err := config.LoadVault(s, vault)
 		if err == nil {
-			if fileReg := files.Get(relPath); fileReg != nil {
+			if fileReg := v.GetFile(relPath); fileReg != nil {
 				if err := encryptFile(s, vault, fileReg); err != nil {
 					fmt.Printf("Warning: encryption failed: %v\n", err)
 					fmt.Println("Run 'shhh encrypt' manually after resolving the issue")

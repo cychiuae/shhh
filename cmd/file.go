@@ -341,9 +341,9 @@ func runFileShow(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		fmt.Printf("  (all vault users)\n")
-		users, _ := config.LoadVaultUsers(s, vault)
-		if users != nil {
-			for _, u := range users.Users {
+		v, _ := config.LoadVault(s, vault)
+		if v != nil {
+			for _, u := range v.Users {
 				fmt.Printf("  - %s\n", u.Email)
 			}
 		}

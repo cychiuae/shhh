@@ -59,14 +59,9 @@ func runVaultCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	usersData := config.NewVaultUsers()
-	if err := usersData.Save(s, name); err != nil {
-		return fmt.Errorf("failed to initialize users: %w", err)
-	}
-
-	filesData := config.NewVaultFiles()
-	if err := filesData.Save(s, name); err != nil {
-		return fmt.Errorf("failed to initialize files: %w", err)
+	vault := config.NewVault()
+	if err := vault.Save(s, name); err != nil {
+		return fmt.Errorf("failed to initialize vault: %w", err)
 	}
 
 	fmt.Printf("Created vault %q\n", name)
@@ -89,13 +84,13 @@ func runVaultRemove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("vault %q does not exist", name)
 	}
 
-	files, err := config.LoadVaultFiles(s, name)
+	vault, err := config.LoadVault(s, name)
 	if err != nil {
-		return fmt.Errorf("failed to load vault files: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
 	if !vaultForce {
-		fileCount := len(files.Files)
+		fileCount := len(vault.Files)
 		if fileCount > 0 {
 			fmt.Printf("Vault %q contains %d registered file(s).\n", name, fileCount)
 		}
@@ -140,25 +135,22 @@ func runVaultList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	for _, v := range vaults {
-		users, _ := config.LoadVaultUsers(s, v)
-		files, _ := config.LoadVaultFiles(s, v)
+	for _, vaultName := range vaults {
+		vault, _ := config.LoadVault(s, vaultName)
 
 		userCount := 0
 		fileCount := 0
-		if users != nil {
-			userCount = len(users.Users)
-		}
-		if files != nil {
-			fileCount = len(files.Files)
+		if vault != nil {
+			userCount = len(vault.Users)
+			fileCount = len(vault.Files)
 		}
 
 		marker := " "
-		if v == cfg.DefaultVault {
+		if vaultName == cfg.DefaultVault {
 			marker = "*"
 		}
 
-		fmt.Printf("%s %s (%d users, %d files)\n", marker, v, userCount, fileCount)
+		fmt.Printf("%s %s (%d users, %d files)\n", marker, vaultName, userCount, fileCount)
 	}
 
 	return nil

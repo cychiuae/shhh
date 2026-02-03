@@ -141,19 +141,19 @@ func runUserList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	users, err := config.LoadVaultUsers(s, vault)
+	v, err := config.LoadVault(s, vault)
 	if err != nil {
-		return fmt.Errorf("failed to load users: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if len(users.Users) == 0 {
+	if len(v.Users) == 0 {
 		fmt.Printf("No users in vault %s\n", vault)
 		return nil
 	}
 
 	fmt.Printf("Users in vault %s:\n\n", vault)
 
-	for _, u := range users.Users {
+	for _, u := range v.Users {
 		status := "valid"
 		if u.ExpiresAt != nil {
 			if crypto.IsExpired(u.ExpiresAt) {

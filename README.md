@@ -221,11 +221,10 @@ shhh file clear-recipients secrets.yaml
 
 ```
 .shhh/
-├── config.json           # Project configuration
+├── config.yaml           # Project configuration
 ├── vaults/
 │   └── <vault-name>/
-│       ├── users.json    # Users in this vault
-│       └── files.json    # Registered files
+│       └── vault.yaml    # Users and registered files for this vault
 └── pubkeys/
     └── <email>.asc       # Cached public keys
 ```

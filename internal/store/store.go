@@ -8,15 +8,14 @@ import (
 )
 
 const (
-	ShhhDir       = ".shhh"
-	ConfigFile    = "config.json"
-	VaultsDir     = "vaults"
-	PubkeysDir    = "pubkeys"
-	UsersFile     = "users.json"
-	FilesFile     = "files.json"
-	DirPerms      = 0700
-	FilePerms     = 0600
-	DefaultVault  = "default"
+	ShhhDir      = ".shhh"
+	ConfigFile   = "config.yaml"
+	VaultsDir    = "vaults"
+	PubkeysDir   = "pubkeys"
+	VaultFile    = "vault.yaml"
+	DirPerms     = 0700
+	FilePerms    = 0600
+	DefaultVault = "default"
 )
 
 var ErrNotInitialized = errors.New("shhh not initialized (run 'shhh init' first)")
@@ -49,12 +48,8 @@ func (s *Store) VaultPath(name string) string {
 	return filepath.Join(s.VaultsPath(), name)
 }
 
-func (s *Store) VaultUsersPath(vault string) string {
-	return filepath.Join(s.VaultPath(vault), UsersFile)
-}
-
-func (s *Store) VaultFilesPath(vault string) string {
-	return filepath.Join(s.VaultPath(vault), FilesFile)
+func (s *Store) VaultConfigPath(vault string) string {
+	return filepath.Join(s.VaultPath(vault), VaultFile)
 }
 
 func (s *Store) PubkeysPath() string {

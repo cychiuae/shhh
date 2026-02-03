@@ -65,11 +65,10 @@
 
 ```
 .shhh/
-├── config.json             # Project-wide configuration
+├── config.yaml             # Project-wide configuration (version, gpg_copy, default_vault)
 ├── vaults/
 │   └── <vault-name>/
-│       ├── users.json      # Users in this vault
-│       └── files.json      # Registered files
+│       └── vault.yaml      # Combined users and files for this vault
 └── pubkeys/
     └── <email>.asc         # Cached public keys
 ```

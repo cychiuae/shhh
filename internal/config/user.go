@@ -28,7 +28,7 @@ func ValidateEmail(email string) error {
 	return nil
 }
 
-func AddUser(s *store.Store, vault, email string) (*User, error) {
+func AddUser(s *store.Store, vaultName, email string) (*User, error) {
 	if err := ValidateEmail(email); err != nil {
 		return nil, err
 	}
@@ -53,9 +53,9 @@ func AddUser(s *store.Store, vault, email string) (*User, error) {
 		return nil, fmt.Errorf("failed to cache public key: %w", err)
 	}
 
-	users, err := LoadVaultUsers(s, vault)
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load vault users: %w", err)
+		return nil, fmt.Errorf("failed to load vault: %w", err)
 	}
 
 	user := User{
@@ -66,42 +66,42 @@ func AddUser(s *store.Store, vault, email string) (*User, error) {
 		AddedAt:     time.Now(),
 	}
 
-	users.Add(user)
+	vault.AddUser(user)
 
-	if err := users.Save(s, vault); err != nil {
-		return nil, fmt.Errorf("failed to save users: %w", err)
+	if err := vault.Save(s, vaultName); err != nil {
+		return nil, fmt.Errorf("failed to save vault: %w", err)
 	}
 
 	return &user, nil
 }
 
-func RemoveUser(s *store.Store, vault, email string) error {
-	users, err := LoadVaultUsers(s, vault)
+func RemoveUser(s *store.Store, vaultName, email string) error {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return fmt.Errorf("failed to load vault users: %w", err)
+		return fmt.Errorf("failed to load vault: %w", err)
 	}
 
-	if !users.Remove(email) {
-		return fmt.Errorf("user %s not found in vault %s", email, vault)
+	if !vault.RemoveUser(email) {
+		return fmt.Errorf("user %s not found in vault %s", email, vaultName)
 	}
 
-	if err := users.Save(s, vault); err != nil {
-		return fmt.Errorf("failed to save users: %w", err)
+	if err := vault.Save(s, vaultName); err != nil {
+		return fmt.Errorf("failed to save vault: %w", err)
 	}
 
 	return nil
 }
 
-func CheckUserKeys(s *store.Store, vault string) ([]UserKeyStatus, error) {
-	users, err := LoadVaultUsers(s, vault)
+func CheckUserKeys(s *store.Store, vaultName string) ([]UserKeyStatus, error) {
+	vault, err := LoadVault(s, vaultName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load vault users: %w", err)
+		return nil, fmt.Errorf("failed to load vault: %w", err)
 	}
 
 	gpg := crypto.GetProvider()
 	var statuses []UserKeyStatus
 
-	for _, user := range users.Users {
+	for _, user := range vault.Users {
 		status := UserKeyStatus{
 			Email:       user.Email,
 			Fingerprint: user.Fingerprint,

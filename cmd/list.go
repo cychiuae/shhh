@@ -45,21 +45,21 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	totalFiles := 0
 
-	for _, vault := range vaults {
-		files, err := config.LoadVaultFiles(s, vault)
+	for _, vaultName := range vaults {
+		vault, err := config.LoadVault(s, vaultName)
 		if err != nil {
-			fmt.Printf("Warning: failed to load files for vault %s: %v\n", vault, err)
+			fmt.Printf("Warning: failed to load vault %s: %v\n", vaultName, err)
 			continue
 		}
 
-		if len(files.Files) == 0 {
+		if len(vault.Files) == 0 {
 			continue
 		}
 
-		fmt.Printf("Vault: %s\n", vault)
+		fmt.Printf("Vault: %s\n", vaultName)
 		fmt.Println()
 
-		for _, f := range files.Files {
+		for _, f := range vault.Files {
 			totalFiles++
 
 			status := getFileStatus(s.Root(), f.Path)

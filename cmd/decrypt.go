@@ -80,18 +80,18 @@ func decryptSingleFile(s *store.Store, filePath string) error {
 	return decryptFile(s, vault, fileReg)
 }
 
-func decryptVaultFiles(s *store.Store, vault string) error {
-	if !s.VaultExists(vault) {
-		return fmt.Errorf("vault %q does not exist", vault)
+func decryptVaultFiles(s *store.Store, vaultName string) error {
+	if !s.VaultExists(vaultName) {
+		return fmt.Errorf("vault %q does not exist", vaultName)
 	}
 
-	files, err := config.LoadVaultFiles(s, vault)
+	vault, err := config.LoadVault(s, vaultName)
 	if err != nil {
 		return err
 	}
 
-	if len(files.Files) == 0 {
-		fmt.Printf("No files registered in vault %s\n", vault)
+	if len(vault.Files) == 0 {
+		fmt.Printf("No files registered in vault %s\n", vaultName)
 		return nil
 	}
 
@@ -103,9 +103,9 @@ func decryptVaultFiles(s *store.Store, vault string) error {
 	var toDecrypt []fileEntry
 	var existingFiles []string
 
-	for i := range files.Files {
-		f := &files.Files[i]
-		toDecrypt = append(toDecrypt, fileEntry{vault: vault, fileReg: f})
+	for i := range vault.Files {
+		f := &vault.Files[i]
+		toDecrypt = append(toDecrypt, fileEntry{vault: vaultName, fileReg: f})
 		plainPath := filepath.Join(s.Root(), f.Path)
 		if _, err := os.Stat(plainPath); err == nil {
 			existingFiles = append(existingFiles, f.Path)
@@ -159,15 +159,15 @@ func decryptAllFiles(s *store.Store) error {
 	var toDecrypt []fileEntry
 	var existingFiles []string
 
-	for _, vault := range vaults {
-		files, err := config.LoadVaultFiles(s, vault)
+	for _, vaultName := range vaults {
+		vault, err := config.LoadVault(s, vaultName)
 		if err != nil {
 			continue
 		}
 
-		for i := range files.Files {
-			f := &files.Files[i]
-			toDecrypt = append(toDecrypt, fileEntry{vault: vault, fileReg: f})
+		for i := range vault.Files {
+			f := &vault.Files[i]
+			toDecrypt = append(toDecrypt, fileEntry{vault: vaultName, fileReg: f})
 			plainPath := filepath.Join(s.Root(), f.Path)
 			if _, err := os.Stat(plainPath); err == nil {
 				existingFiles = append(existingFiles, f.Path)

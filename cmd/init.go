@@ -46,14 +46,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	usersData := config.NewVaultUsers()
-	if err := usersData.Save(s, store.DefaultVault); err != nil {
-		return fmt.Errorf("failed to initialize users: %w", err)
-	}
-
-	filesData := config.NewVaultFiles()
-	if err := filesData.Save(s, store.DefaultVault); err != nil {
-		return fmt.Errorf("failed to initialize files: %w", err)
+	vault := config.NewVault()
+	if err := vault.Save(s, store.DefaultVault); err != nil {
+		return fmt.Errorf("failed to initialize vault: %w", err)
 	}
 
 	isGit := isGitRepo(cwd)
