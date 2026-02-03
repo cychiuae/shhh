@@ -26,17 +26,54 @@ Files with other extensions are encrypted using full-file mode.
 
 ## Installation
 
+### Quick Install (Recommended)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/cychiuae/shhh/main/install.sh | bash
+```
+
+This will automatically download the appropriate binary for your system, or build from source if no pre-built binary is available.
+
+### Install Options
+
+```bash
+# Install to a custom directory
+INSTALL_DIR=/opt/bin curl -sSL https://raw.githubusercontent.com/cychiuae/shhh/main/install.sh | bash
+
+# Install a specific version
+VERSION=v0.1.0 curl -sSL https://raw.githubusercontent.com/cychiuae/shhh/main/install.sh | bash
+```
+
+### Using Go
+
 ```bash
 go install github.com/cychiuae/shhh@latest
 ```
 
-Or build from source:
+### Download Binary
+
+Download pre-built binaries from the [Releases](https://github.com/cychiuae/shhh/releases) page.
+
+| Platform | Architecture | Download |
+|----------|--------------|----------|
+| Linux    | x86_64       | `shhh-linux-amd64` |
+| Linux    | ARM64        | `shhh-linux-arm64` |
+| macOS    | x86_64       | `shhh-darwin-amd64` |
+| macOS    | ARM64 (M1/M2)| `shhh-darwin-arm64` |
+| Windows  | x86_64       | `shhh-windows-amd64.exe` |
+
+### Build from Source
 
 ```bash
 git clone https://github.com/cychiuae/shhh.git
 cd shhh
-go build -o shhh .
+make build
+# or: go build -o shhh .
 ```
+
+### Requirements
+
+- GPG (GnuPG) must be installed for key management
 
 ## Quick Start
 
