@@ -1,6 +1,6 @@
 module github.com/cychiuae/shhh
 
-go 1.21
+go 1.25
 
 require (
 	github.com/ProtonMail/go-crypto v1.0.0
