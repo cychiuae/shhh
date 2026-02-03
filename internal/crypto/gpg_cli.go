@@ -170,3 +170,8 @@ func (g *CLIGPG) ImportPublicKey(armoredKey []byte) (*KeyInfo, error) {
 	email := matches[1]
 	return g.LookupKey(email)
 }
+
+func (g *CLIGPG) LoadCachedPublicKeys(dirPath string) error {
+	// CLIGPG uses system keyring; avoid modifying it with cached keys
+	return nil
+}

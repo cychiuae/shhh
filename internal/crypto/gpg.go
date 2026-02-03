@@ -29,6 +29,7 @@ type GPGProvider interface {
 	Encrypt(data []byte, recipients []string) ([]byte, error)
 	Decrypt(data []byte) ([]byte, error)
 	ImportPublicKey(armoredKey []byte) (*KeyInfo, error)
+	LoadCachedPublicKeys(dirPath string) error
 }
 
 var defaultProvider GPGProvider
@@ -95,6 +96,14 @@ func (f *fallbackProvider) ImportPublicKey(armoredKey []byte) (*KeyInfo, error) 
 		return key, nil
 	}
 	return f.fallback.ImportPublicKey(armoredKey)
+}
+
+func (f *fallbackProvider) LoadCachedPublicKeys(dirPath string) error {
+	return f.primary.LoadCachedPublicKeys(dirPath)
+}
+
+func LoadCachedPublicKeys(pubkeysDir string) error {
+	return GetProvider().LoadCachedPublicKeys(pubkeysDir)
 }
 
 func IsExpiringSoon(expiresAt *time.Time, days int) bool {

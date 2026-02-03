@@ -35,6 +35,10 @@ func runEdit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err := crypto.LoadCachedPublicKeys(s.PubkeysPath()); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load cached keys: %v\n", err)
+	}
+
 	filePath := strings.TrimSuffix(args[0], ".enc")
 
 	absPath, err := filepath.Abs(filePath)

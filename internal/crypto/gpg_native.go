@@ -264,3 +264,34 @@ func (g *NativeGPG) AddEntity(entity *openpgp.Entity) {
 func (g *NativeGPG) GetKeyring() openpgp.EntityList {
 	return g.keyring
 }
+
+func (g *NativeGPG) LoadCachedPublicKeys(dirPath string) error {
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return nil
+	}
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return fmt.Errorf("failed to read pubkeys directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".asc") {
+			continue
+		}
+
+		keyPath := filepath.Join(dirPath, entry.Name())
+		keyData, err := os.ReadFile(keyPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to read key file %s: %v\n", entry.Name(), err)
+			continue
+		}
+
+		if _, err := g.ImportPublicKey(keyData); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to import key from %s: %v\n", entry.Name(), err)
+			continue
+		}
+	}
+
+	return nil
+}
